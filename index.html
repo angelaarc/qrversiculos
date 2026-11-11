@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#1d2b64">
+<title>Un versículo para ti</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: Georgia, "Times New Roman", serif;
+    color: #fff;
+    background: #1d2b64;
+    overflow-x: hidden;
+  }
+  #fondo {
+    position: fixed; inset: 0;
+    background-size: 220% 220%;
+    animation: mover 18s ease-in-out infinite alternate;
+    z-index: 0;
+  }
+  @keyframes mover {
+    0%   { background-position: 0% 0%; }
+    100% { background-position: 100% 100%; }
+  }
+  main {
+    position: relative; z-index: 1;
+    min-height: 100%;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    text-align: center;
+    padding: 48px 28px;
+  }
+  .adorno { font-size: 1.6rem; opacity: .85; margin-bottom: 22px; letter-spacing: .3em; }
+  blockquote {
+    max-width: 640px;
+    font-size: clamp(1.35rem, 5.2vw, 2rem);
+    line-height: 1.55;
+    font-style: italic;
+    text-shadow: 0 2px 14px rgba(0,0,0,.45);
+    opacity: 0; animation: aparecer 2.2s ease .3s forwards;
+  }
+  cite {
+    display: block; margin-top: 26px;
+    font-style: normal; font-weight: bold;
+    font-size: clamp(1.05rem, 4vw, 1.3rem);
+    letter-spacing: .08em;
+    text-shadow: 0 2px 10px rgba(0,0,0,.45);
+    opacity: 0; animation: aparecer 2.2s ease 1.4s forwards;
+  }
+  #aviso {
+    position: fixed; bottom: 18px; left: 0; right: 0;
+    text-align: center; z-index: 2;
+    font-family: system-ui, sans-serif; font-size: .8rem;
+    opacity: 0; transition: opacity 1s ease; pointer-events: none;
+    text-shadow: 0 1px 6px rgba(0,0,0,.6);
+  }
+  #aviso.ver { opacity: .75; }
+  @keyframes aparecer { to { opacity: 1; } }
+</style>
+</head>
+<body>
+  <div id="fondo"></div>
+  <main>
+    <div class="adorno">✦ ✦ ✦</div>
+    <blockquote id="texto"></blockquote>
+    <cite id="cita"></cite>
+  </main>
+  <div id="aviso">Toca la pantalla para activar la música ♪</div>
+
+  <script src="datos.js"></script>
+  <script>
+    function elegir(lista, clave) {
+      var i = Math.floor(Math.random() * lista.length);
+      try {
+        var ultimo = parseInt(localStorage.getItem(clave), 10);
+        if (lista.length > 1 && i === ultimo) { i = (i + 1) % lista.length; }
+        localStorage.setItem(clave, i);
+      } catch (e) {}
+      return lista[i];
+    }
+
+    // Versículo
+    var v = elegir(VERSICULOS, "ultimoVersiculo");
+    document.getElementById("texto").textContent = "“" + v.texto + "”";
+    document.getElementById("cita").textContent = v.cita;
+    document.title = v.cita + " – Un versículo para ti";
+
+    // Fondo
+    var f = elegir(FONDOS, "ultimoFondo");
+    var angulo = Math.floor(Math.random() * 360);
+    document.getElementById("fondo").style.backgroundImage =
+      "linear-gradient(" + angulo + "deg, " + f[0] + ", " + f[1] + ", " + f[2] + ", " + f[0] + ")";
+    document.querySelector('meta[name="theme-color"]').setAttribute("content", f[0]);
+
+    // Música (una al azar; si falla, prueba otra)
+    var aviso = document.getElementById("aviso");
+    var pendientes = MUSICAS.slice().sort(function () { return Math.random() - 0.5; });
+    var audio = null, sonando = false;
+
+    function siguiente() {
+      if (!pendientes.length) { aviso.classList.remove("ver"); return; }
+      audio = new Audio(pendientes.shift());
+      audio.loop = true;
+      audio.volume = 0.6;
+      audio.addEventListener("error", siguiente);
+      intentar();
+    }
+    function intentar() {
+      var p = audio.play();
+      if (p && p.then) {
+        p.then(function () { sonando = true; aviso.classList.remove("ver"); })
+         .catch(function () {
+            if (!sonando) { aviso.classList.add("ver"); }
+         });
+      }
+    }
+    function alTocar() {
+      if (sonando || !audio) { return; }
+      intentar();
+    }
+    ["click", "touchstart", "keydown", "scroll"].forEach(function (ev) {
+      window.addEventListener(ev, alTocar, { passive: true });
+    });
+    siguiente();
+  </script>
+</body>
+</html>
